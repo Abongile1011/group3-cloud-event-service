@@ -1,0 +1,116 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: >
+  Group 3 Cloud-Based Event Service.
+  Milestone 3 working vertical slice for student file submission.
+
+Globals:
+  Function:
+    Runtime: python3.11
+    Timeout: 10
+    MemorySize: 128
+    Environment:
+      Variables:
+        SUBMISSIONS_TABLE: StudentSubmissions
+        UPLOAD_BUCKET: student-submission-uploads
+        DYNAMODB_ENDPOINT: http://host.docker.internal:8000
+
+Resources:
+
+  # ---------------------------------------------------------
+  # RequestUpload Lambda
+  # POST /submissions
+  # ---------------------------------------------------------
+  RequestUploadFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/request_upload/
+      Handler: app.lambda_handler
+      Events:
+        RequestUploadApi:
+          Type: Api
+          Properties:
+            Path: /submissions
+            Method: post
+
+  # ---------------------------------------------------------
+  # GetSubmission Lambda
+  # GET /submissions/{submission_id}
+  # ---------------------------------------------------------
+  GetSubmissionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/get_submission/
+      Handler: app.lambda_handler
+      Events:
+        GetSubmissionApi:
+          Type: Api
+          Properties:
+            Path: /submissions/{submission_id}
+            Method: get
+
+  # ---------------------------------------------------------
+  # ProcessUpload Lambda
+  # Triggered when a file is uploaded to S3
+  # ---------------------------------------------------------
+  ProcessUploadFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/process_upload/
+      Handler: app.lambda_handler
+      Events:
+        FileUploaded:
+          Type: S3
+          Properties:
+            Bucket: !Ref UploadBucket
+            Events: s3:ObjectCreated:*
+
+  # ---------------------------------------------------------
+  # ExpirePending Lambda
+  # Invoked periodically to expire abandoned submissions
+  # ---------------------------------------------------------
+  ExpirePendingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/expire_pending/
+      Handler: app.lambda_handler
+      Events:
+        ExpirySchedule:
+          Type: Schedule
+          Properties:
+            Schedule: rate(5 minutes)
+            Enabled: true
+
+  # ---------------------------------------------------------
+  # S3 Bucket
+  # Stores uploaded student files
+  # ---------------------------------------------------------
+  UploadBucket:
+    Type: AWS::S3::Bucket
+
+  # ---------------------------------------------------------
+  # DynamoDB Table
+  # Stores submission metadata and status
+  # ---------------------------------------------------------
+  SubmissionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: StudentSubmissions
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: submission_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: submission_id
+          KeyType: HASH
+
+Outputs:
+
+  SubmitApi:
+    Description: API endpoint for creating submissions
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/submissions"
+
+  GetSubmissionApi:
+    Description: API endpoint for retrieving submission status
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/submissions/{submission_id}"

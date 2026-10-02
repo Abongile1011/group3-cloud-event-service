@@ -1,0 +1,16 @@
+{
+  "Records": [
+    {
+      "s3": {
+        "bucket": {
+          "name": "student-submission-uploads"
+        },
+        "object": {
+          "key": "uploads/ee401cef-84f6-4bb7-8041-67cf88b98592/submission.pdf",
+          "size": 2097152,
+          "content_type": "application/pdf"
+        }
+      }
+    }
+  ]
+}
