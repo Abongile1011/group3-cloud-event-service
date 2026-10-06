@@ -5,3 +5,7 @@ __pycache__/
 .aws-sam/
 .env
 .env.*
+
+# Local file storage
+local-storage/*
+!local-storage/.gitkeep
