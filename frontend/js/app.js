@@ -8,81 +8,166 @@ const checkStatusButton = document.getElementById("checkStatusButton");
 const statusResult = document.getElementById("statusResult");
 
 
+// ==========================================================
+// SUBMIT FILE
+// ==========================================================
+
 submissionForm.addEventListener("submit", async function (event) {
 
     event.preventDefault();
 
-    const studentRef = document.getElementById("studentRef").value.trim();
-    const courseCode = document.getElementById("courseCode").value.trim();
-    const assessment = document.getElementById("assessment").value.trim();
+    // ------------------------------------------------------
+    // Get values from the form
+    // ------------------------------------------------------
 
-    const fileInput = document.getElementById("submissionFile");
+    const studentRef =
+        document.getElementById("studentRef").value.trim();
+
+    const courseCode =
+        document.getElementById("courseCode").value.trim();
+
+    const assessment =
+        document.getElementById("assessment").value.trim();
+
+    const fileInput =
+        document.getElementById("submissionFile");
+
     const file = fileInput.files[0];
 
+
+    // ------------------------------------------------------
+    // Check that a file was selected
+    // ------------------------------------------------------
+
     if (!file) {
-        submissionResult.innerHTML =
-            "<p>Please select a file.</p>";
+
+        submissionResult.innerHTML = `
+            <p>Please select a file.</p>
+        `;
+
         return;
     }
 
+
+    // ------------------------------------------------------
+    // Metadata that will first be sent to RequestUpload
+    // ------------------------------------------------------
+
     const requestData = {
+
         student_ref: studentRef,
+
         course_code: courseCode,
+
         assessment: assessment,
+
         file_name: file.name,
+
         content_type: file.type,
+
         file_size_bytes: file.size
     };
 
-    submissionResult.innerHTML =
-        "<p>Creating submission...</p>";
+
+    submissionResult.innerHTML = `
+        <p>Creating submission...</p>
+    `;
+
 
     try {
 
-        // --------------------------------------------------
-        // STEP 1: Create the submission record
-        // --------------------------------------------------
+        // ==================================================
+        // STEP 1
+        // Create submission record
+        // ==================================================
 
-        const response = await fetch(`${API_URL}/submissions`, {
-            method: "POST",
+        const response = await fetch(
+            `${API_URL}/submissions`,
+            {
+                method: "POST",
 
-            headers: {
-                "Content-Type": "application/json"
-            },
+                headers: {
+                    "Content-Type": "application/json"
+                },
 
-            body: JSON.stringify(requestData)
-        });
+                body: JSON.stringify(requestData)
+            }
+        );
+
 
         const data = await response.json();
 
+
+        // --------------------------------------------------
+        // Check if submission creation failed
+        // --------------------------------------------------
+
         if (!response.ok) {
+
             submissionResult.innerHTML = `
-                <p><strong>Submission failed.</strong></p>
-                <p>${data.error || data.message || "Unknown error"}</p>
+                <p>
+                    <strong>Submission failed.</strong>
+                </p>
+
+                <p>
+                    ${
+                        data.error ||
+                        data.message ||
+                        "Unknown error"
+                    }
+                </p>
             `;
+
             return;
         }
+
+
+        // ==================================================
+        // STEP 2
+        // Get generated submission ID
+        // ==================================================
 
         const submissionId = data.submission_id;
 
         submissionIdInput.value = submissionId;
 
+
         submissionResult.innerHTML = `
-            <p><strong>Submission created.</strong></p>
-            <p>Uploading actual file...</p>
+            <p>
+                <strong>Submission created.</strong>
+            </p>
+
+            <p>
+                <strong>Submission ID:</strong><br>
+                ${submissionId}
+            </p>
+
+            <p>
+                <strong>Status:</strong>
+                <span class="status status-pending">
+                    PENDING
+                </span>
+            </p>
+
+            <p>
+                Uploading and validating actual file...
+            </p>
         `;
 
 
-        // --------------------------------------------------
-        // STEP 2: Convert the actual file to Base64
-        // --------------------------------------------------
+        // ==================================================
+        // STEP 3
+        // Convert actual file to Base64
+        // ==================================================
 
-        const fileBase64 = await fileToBase64(file);
+        const fileBase64 =
+            await fileToBase64(file);
 
 
-        // --------------------------------------------------
-        // STEP 3: Upload the actual file
-        // --------------------------------------------------
+        // ==================================================
+        // STEP 4
+        // Upload actual file
+        // ==================================================
 
         const uploadResponse = await fetch(
             `${API_URL}/submissions/${submissionId}/upload`,
@@ -98,35 +183,85 @@ submissionForm.addEventListener("submit", async function (event) {
             }
         );
 
-        const uploadData = await uploadResponse.json();
+
+        const uploadData =
+            await uploadResponse.json();
+
+
+        // --------------------------------------------------
+        // Check if actual file upload failed
+        // --------------------------------------------------
 
         if (!uploadResponse.ok) {
+
             submissionResult.innerHTML = `
-                <p><strong>Submission record created.</strong></p>
+                <p>
+                    <strong>
+                        Submission record created.
+                    </strong>
+                </p>
 
                 <p>
                     <strong>Submission ID:</strong><br>
                     ${submissionId}
                 </p>
 
-                <p><strong>File upload failed.</strong></p>
+                <p>
+                    <strong>
+                        File upload failed.
+                    </strong>
+                </p>
 
                 <p>
-                    ${uploadData.error ||
-                      uploadData.message ||
-                      "Unknown upload error"}
+                    ${
+                        uploadData.error ||
+                        uploadData.message ||
+                        "Unknown upload error"
+                    }
                 </p>
             `;
+
             return;
         }
 
 
+        // ==================================================
+        // STEP 5
+        // Get FINAL status returned after validation
+        // ==================================================
+
+        const finalStatus =
+            uploadData.status || "PENDING";
+
+
         // --------------------------------------------------
-        // STEP 4: Display successful upload
+        // Choose correct CSS class for final status
         // --------------------------------------------------
 
+        const finalStatusClass =
+            finalStatus === "ACCEPTED"
+                ? "status-accepted"
+
+                : finalStatus === "REJECTED"
+                ? "status-rejected"
+
+                : finalStatus === "EXPIRED"
+                ? "status-expired"
+
+                : "status-pending";
+
+
+        // ==================================================
+        // STEP 6
+        // Display final submission result
+        // ==================================================
+
         submissionResult.innerHTML = `
-            <p><strong>File submitted successfully.</strong></p>
+            <p>
+                <strong>
+                    File submitted successfully.
+                </strong>
+            </p>
 
             <p>
                 <strong>Submission ID:</strong><br>
@@ -144,15 +279,26 @@ submissionForm.addEventListener("submit", async function (event) {
             </p>
 
             <p>
+                <strong>Content Type:</strong>
+                ${uploadData.content_type}
+            </p>
+
+            <p>
                 <strong>Storage:</strong>
                 ${uploadData.storage}
             </p>
 
             <p>
                 <strong>Status:</strong>
-                <span class="status status-pending">
-                    ${data.status}
+
+                <span class="status ${finalStatusClass}">
+                    ${finalStatus}
                 </span>
+            </p>
+
+            <p>
+                <strong>Validation Result:</strong><br>
+                ${uploadData.message}
             </p>
 
             <p>
@@ -161,133 +307,224 @@ submissionForm.addEventListener("submit", async function (event) {
             </p>
         `;
 
+
     } catch (error) {
 
         console.error(error);
 
         submissionResult.innerHTML = `
-            <p><strong>Unable to connect to the backend.</strong></p>
-            <p>Check that SAM Local API is running.</p>
+            <p>
+                <strong>
+                    Unable to connect to the backend.
+                </strong>
+            </p>
+
+            <p>
+                Check that SAM Local API is running.
+            </p>
         `;
     }
 });
 
 
-// ----------------------------------------------------------
-// Convert browser File object to Base64
-// ----------------------------------------------------------
+// ==========================================================
+// CONVERT FILE TO BASE64
+// ==========================================================
 
 function fileToBase64(file) {
 
-    return new Promise((resolve, reject) => {
+    return new Promise(
+        (resolve, reject) => {
 
-        const reader = new FileReader();
+            const reader =
+                new FileReader();
 
-        reader.onload = function () {
 
-            const result = reader.result;
+            reader.onload = function () {
 
-            // Remove:
-            // data:application/pdf;base64,
-            const base64Data = result.split(",")[1];
+                const result =
+                    reader.result;
 
-            resolve(base64Data);
-        };
+                // Remove the data URL prefix.
+                //
+                // Example:
+                // data:application/pdf;base64,
+                //
+                // Only the Base64 file data is sent.
 
-        reader.onerror = function () {
-            reject(new Error("Unable to read selected file."));
-        };
+                const base64Data =
+                    result.split(",")[1];
 
-        reader.readAsDataURL(file);
-    });
+                resolve(base64Data);
+            };
+
+
+            reader.onerror = function () {
+
+                reject(
+                    new Error(
+                        "Unable to read selected file."
+                    )
+                );
+            };
+
+
+            reader.readAsDataURL(file);
+        }
+    );
 }
 
 
-// ----------------------------------------------------------
-// Check Submission Status
-// ----------------------------------------------------------
+// ==========================================================
+// CHECK SUBMISSION STATUS
+// ==========================================================
 
-checkStatusButton.addEventListener("click", async function () {
+checkStatusButton.addEventListener(
+    "click",
+    async function () {
 
-    const submissionId = submissionIdInput.value.trim();
+        const submissionId =
+            submissionIdInput.value.trim();
 
-    if (!submissionId) {
-        statusResult.innerHTML =
-            "<p>Please enter a submission ID.</p>";
-        return;
-    }
 
-    statusResult.innerHTML =
-        "<p>Checking status...</p>";
+        // --------------------------------------------------
+        // Check that submission ID exists
+        // --------------------------------------------------
 
-    try {
+        if (!submissionId) {
 
-        const response = await fetch(
-            `${API_URL}/submissions/${submissionId}`
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
             statusResult.innerHTML = `
-                <p><strong>Unable to retrieve submission.</strong></p>
-                <p>${data.error || data.message || "Unknown error"}</p>
+                <p>
+                    Please enter a submission ID.
+                </p>
             `;
+
             return;
         }
 
-        const submission = data.submission;
-
-        const statusClass =
-            submission.status === "ACCEPTED"
-                ? "status-accepted"
-                : submission.status === "REJECTED"
-                ? "status-rejected"
-                : submission.status === "EXPIRED"
-                ? "status-expired"
-                : "status-pending";
 
         statusResult.innerHTML = `
-            <p>
-                <strong>Submission ID:</strong><br>
-                ${submission.submission_id}
-            </p>
-
-            <p>
-                <strong>Student Reference:</strong>
-                ${submission.student_ref}
-            </p>
-
-            <p>
-                <strong>File:</strong>
-                ${submission.file_name}
-            </p>
-
-            <p>
-                <strong>Course:</strong>
-                ${submission.course_code}
-            </p>
-
-            <p>
-                <strong>Assessment:</strong>
-                ${submission.assessment}
-            </p>
-
-            <p>
-                <strong>Status:</strong>
-                <span class="status ${statusClass}">
-                    ${submission.status}
-                </span>
-            </p>
+            <p>Checking status...</p>
         `;
 
-    } catch (error) {
 
-        console.error(error);
+        try {
 
-        statusResult.innerHTML = `
-            <p><strong>Unable to connect to the backend.</strong></p>
-            <p>Check that SAM Local API is running.</p>
-        `;
+            // ==================================================
+            // Retrieve submission from backend
+            // ==================================================
+
+            const response = await fetch(
+                `${API_URL}/submissions/${submissionId}`
+            );
+
+
+            const data =
+                await response.json();
+
+
+            // --------------------------------------------------
+            // Handle retrieval error
+            // --------------------------------------------------
+
+            if (!response.ok) {
+
+                statusResult.innerHTML = `
+                    <p>
+                        <strong>
+                            Unable to retrieve submission.
+                        </strong>
+                    </p>
+
+                    <p>
+                        ${
+                            data.error ||
+                            data.message ||
+                            "Unknown error"
+                        }
+                    </p>
+                `;
+
+                return;
+            }
+
+
+            const submission =
+                data.submission;
+
+
+            // --------------------------------------------------
+            // Determine status colour
+            // --------------------------------------------------
+
+            const statusClass =
+                submission.status === "ACCEPTED"
+                    ? "status-accepted"
+
+                    : submission.status === "REJECTED"
+                    ? "status-rejected"
+
+                    : submission.status === "EXPIRED"
+                    ? "status-expired"
+
+                    : "status-pending";
+
+
+            // ==================================================
+            // Display submission
+            // ==================================================
+
+            statusResult.innerHTML = `
+                <p>
+                    <strong>Submission ID:</strong><br>
+                    ${submission.submission_id}
+                </p>
+
+                <p>
+                    <strong>Student Reference:</strong>
+                    ${submission.student_ref}
+                </p>
+
+                <p>
+                    <strong>File:</strong>
+                    ${submission.file_name}
+                </p>
+
+                <p>
+                    <strong>Course:</strong>
+                    ${submission.course_code}
+                </p>
+
+                <p>
+                    <strong>Assessment:</strong>
+                    ${submission.assessment}
+                </p>
+
+                <p>
+                    <strong>Status:</strong>
+
+                    <span class="status ${statusClass}">
+                        ${submission.status}
+                    </span>
+                </p>
+            `;
+
+
+        } catch (error) {
+
+            console.error(error);
+
+            statusResult.innerHTML = `
+                <p>
+                    <strong>
+                        Unable to connect to the backend.
+                    </strong>
+                </p>
+
+                <p>
+                    Check that SAM Local API is running.
+                </p>
+            `;
+        }
     }
-});
+);
