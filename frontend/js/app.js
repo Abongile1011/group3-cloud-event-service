@@ -35,9 +35,13 @@ submissionForm.addEventListener("submit", async function (event) {
     };
 
     submissionResult.innerHTML =
-        "<p>Submitting...</p>";
+        "<p>Creating submission...</p>";
 
     try {
+
+        // --------------------------------------------------
+        // STEP 1: Create the submission record
+        // --------------------------------------------------
 
         const response = await fetch(`${API_URL}/submissions`, {
             method: "POST",
@@ -54,17 +58,94 @@ submissionForm.addEventListener("submit", async function (event) {
         if (!response.ok) {
             submissionResult.innerHTML = `
                 <p><strong>Submission failed.</strong></p>
-                <p>${data.error || "Unknown error"}</p>
+                <p>${data.error || data.message || "Unknown error"}</p>
             `;
             return;
         }
 
+        const submissionId = data.submission_id;
+
+        submissionIdInput.value = submissionId;
+
         submissionResult.innerHTML = `
-            <p><strong>Submission created successfully.</strong></p>
+            <p><strong>Submission created.</strong></p>
+            <p>Uploading actual file...</p>
+        `;
+
+
+        // --------------------------------------------------
+        // STEP 2: Convert the actual file to Base64
+        // --------------------------------------------------
+
+        const fileBase64 = await fileToBase64(file);
+
+
+        // --------------------------------------------------
+        // STEP 3: Upload the actual file
+        // --------------------------------------------------
+
+        const uploadResponse = await fetch(
+            `${API_URL}/submissions/${submissionId}/upload`,
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/octet-stream",
+                    "X-File-Name": file.name
+                },
+
+                body: fileBase64
+            }
+        );
+
+        const uploadData = await uploadResponse.json();
+
+        if (!uploadResponse.ok) {
+            submissionResult.innerHTML = `
+                <p><strong>Submission record created.</strong></p>
+
+                <p>
+                    <strong>Submission ID:</strong><br>
+                    ${submissionId}
+                </p>
+
+                <p><strong>File upload failed.</strong></p>
+
+                <p>
+                    ${uploadData.error ||
+                      uploadData.message ||
+                      "Unknown upload error"}
+                </p>
+            `;
+            return;
+        }
+
+
+        // --------------------------------------------------
+        // STEP 4: Display successful upload
+        // --------------------------------------------------
+
+        submissionResult.innerHTML = `
+            <p><strong>File submitted successfully.</strong></p>
 
             <p>
                 <strong>Submission ID:</strong><br>
-                ${data.submission_id}
+                ${submissionId}
+            </p>
+
+            <p>
+                <strong>File:</strong>
+                ${uploadData.file_name}
+            </p>
+
+            <p>
+                <strong>Uploaded Size:</strong>
+                ${uploadData.file_size_bytes} bytes
+            </p>
+
+            <p>
+                <strong>Storage:</strong>
+                ${uploadData.storage}
             </p>
 
             <p>
@@ -75,17 +156,10 @@ submissionForm.addEventListener("submit", async function (event) {
             </p>
 
             <p>
-                <strong>Expires At:</strong><br>
-                ${data.expires_at}
-            </p>
-
-            <p>
                 <strong>Request ID:</strong><br>
                 ${data.request_id}
             </p>
         `;
-
-        submissionIdInput.value = data.submission_id;
 
     } catch (error) {
 
@@ -98,6 +172,40 @@ submissionForm.addEventListener("submit", async function (event) {
     }
 });
 
+
+// ----------------------------------------------------------
+// Convert browser File object to Base64
+// ----------------------------------------------------------
+
+function fileToBase64(file) {
+
+    return new Promise((resolve, reject) => {
+
+        const reader = new FileReader();
+
+        reader.onload = function () {
+
+            const result = reader.result;
+
+            // Remove:
+            // data:application/pdf;base64,
+            const base64Data = result.split(",")[1];
+
+            resolve(base64Data);
+        };
+
+        reader.onerror = function () {
+            reject(new Error("Unable to read selected file."));
+        };
+
+        reader.readAsDataURL(file);
+    });
+}
+
+
+// ----------------------------------------------------------
+// Check Submission Status
+// ----------------------------------------------------------
 
 checkStatusButton.addEventListener("click", async function () {
 
@@ -123,12 +231,11 @@ checkStatusButton.addEventListener("click", async function () {
         if (!response.ok) {
             statusResult.innerHTML = `
                 <p><strong>Unable to retrieve submission.</strong></p>
-                <p>${data.error || "Unknown error"}</p>
+                <p>${data.error || data.message || "Unknown error"}</p>
             `;
             return;
         }
 
-        // GetSubmission returns the record inside "submission"
         const submission = data.submission;
 
         const statusClass =
