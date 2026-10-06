@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.aws-sam/
+.env
+.env.*
+
+# Local file storage
+local-storage/*
+!local-storage/.gitkeep
