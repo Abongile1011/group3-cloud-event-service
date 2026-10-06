@@ -15,6 +15,11 @@ Globals:
         SUBMISSIONS_TABLE: StudentSubmissions
         UPLOAD_BUCKET: student-submission-uploads
         DYNAMODB_ENDPOINT: http://host.docker.internal:8000
+  Api:
+    Cors:
+      AllowMethods: "'GET,POST,OPTIONS'"
+      AllowHeaders: "'Content-Type'"
+      AllowOrigin: "'http://127.0.0.1:5500'"
 
 Resources:
 

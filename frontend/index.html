@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Student Submission Service</title>
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <header>
+        <h1>Student File Submission Service</h1>
+        <p>4CPS501B Cloud-Based Event Service</p>
+    </header>
+
+    <main>
+
+        <!-- =========================
+             SUBMIT FILE SECTION
+        ========================== -->
+        <section class="card">
+
+            <h2>Submit Assessment</h2>
+
+            <form id="submissionForm">
+
+                <label for="studentRef">
+                    Student Reference
+                </label>
+
+                <input
+                    type="text"
+                    id="studentRef"
+                    placeholder="e.g. 20260001"
+                    required
+                >
+
+                <label for="courseCode">
+                    Course Code
+                </label>
+
+                <input
+                    type="text"
+                    id="courseCode"
+                    value="4CPS501B"
+                    required
+                >
+
+                <label for="assessment">
+                    Assessment
+                </label>
+
+                <input
+                    type="text"
+                    id="assessment"
+                    value="Milestone 3"
+                    required
+                >
+
+                <label for="submissionFile">
+                    Select File
+                </label>
+
+                <input
+                    type="file"
+                    id="submissionFile"
+                    accept=".pdf,.doc,.docx"
+                    required
+                >
+
+                <p class="help-text">
+                    Allowed file types: PDF, DOC and DOCX.
+                    Maximum file size: 10 MB.
+                </p>
+
+                <button type="submit">
+                    Submit File
+                </button>
+
+            </form>
+
+        </section>
+
+
+        <!-- =========================
+             SUBMISSION RESULT
+        ========================== -->
+        <section class="card" id="resultSection">
+
+            <h2>Submission Result</h2>
+
+            <div id="submissionResult">
+                <p>No submission has been made yet.</p>
+            </div>
+
+        </section>
+
+
+        <!-- =========================
+             CHECK STATUS
+        ========================== -->
+        <section class="card">
+
+            <h2>Check Submission Status</h2>
+
+            <label for="submissionId">
+                Submission ID
+            </label>
+
+            <input
+                type="text"
+                id="submissionId"
+                placeholder="Enter submission ID"
+            >
+
+            <button
+                type="button"
+                id="checkStatusButton"
+            >
+                Check Status
+            </button>
+
+            <div id="statusResult">
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <footer>
+        <p>
+            Group 3 | 4CPS501B Cloud Computing
+        </p>
+    </footer>
+
+
+    <script src="js/app.js"></script>
+
+</body>
+</html>
