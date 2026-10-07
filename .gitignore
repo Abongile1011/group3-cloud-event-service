@@ -9,3 +9,5 @@ __pycache__/
 # Local file storage
 local-storage/*
 !local-storage/.gitkeep
+
+!.env.example
