@@ -1,7 +1,6 @@
 import base64
 import json
 import logging
-import mimetypes
 import os
 from pathlib import Path
 
@@ -20,6 +19,17 @@ ALLOWED_EXTENSIONS = {
     ".docx",
 }
 
+# Use fixed MIME types for the file types supported
+# by the Student File Submission Service.
+CONTENT_TYPES = {
+    ".pdf": "application/pdf",
+    ".doc": "application/msword",
+    ".docx": (
+        "application/vnd.openxmlformats-officedocument."
+        "wordprocessingml.document"
+    ),
+}
+
 TABLE_NAME = os.environ.get(
     "SUBMISSIONS_TABLE",
     "StudentSubmissions"
@@ -27,7 +37,7 @@ TABLE_NAME = os.environ.get(
 
 DYNAMODB_ENDPOINT = os.environ.get("DYNAMODB_ENDPOINT")
 
-# Local storage is used only for Milestone 3 development.
+# Local storage is used only for local development.
 # Amazon S3 remains the target cloud storage service.
 LOCAL_STORAGE_PATH = os.environ.get(
     "LOCAL_STORAGE_PATH",
@@ -106,7 +116,6 @@ def lambda_handler(event, context):
                 "message": "submission_id is required."
             })
 
-
         # -------------------------------------------------
         # 2. Get uploaded file
         # -------------------------------------------------
@@ -119,7 +128,6 @@ def lambda_handler(event, context):
                 "message": "No file was provided.",
                 "submission_id": submission_id
             })
-
 
         # -------------------------------------------------
         # 3. Decode Base64 file
@@ -146,7 +154,6 @@ def lambda_handler(event, context):
                 "submission_id": submission_id
             })
 
-
         # -------------------------------------------------
         # 4. Validate actual file size
         # -------------------------------------------------
@@ -166,7 +173,6 @@ def lambda_handler(event, context):
                 "message": "File exceeds the maximum size of 2 MB.",
                 "submission_id": submission_id
             })
-
 
         # -------------------------------------------------
         # 5. Get and validate file name
@@ -192,20 +198,16 @@ def lambda_handler(event, context):
                 "submission_id": submission_id
             })
 
-
         # -------------------------------------------------
-        # 6. Determine actual content type
+        # 6. Determine content type
+        # -------------------------------------------------
+        #
+        # The service only accepts PDF, DOC and DOCX.
+        # Using an explicit mapping keeps MIME validation
+        # consistent across Windows, SAM Local and Lambda.
         # -------------------------------------------------
 
-        uploaded_content_type, _ = mimetypes.guess_type(
-            file_name
-        )
-
-        if uploaded_content_type is None:
-            uploaded_content_type = (
-                "application/octet-stream"
-            )
-
+        uploaded_content_type = CONTENT_TYPES[extension]
 
         # -------------------------------------------------
         # 7. Retrieve original DynamoDB record
@@ -235,7 +237,6 @@ def lambda_handler(event, context):
                 "submission_id": submission_id
             })
 
-
         submission = result.get("Item")
 
         if not submission:
@@ -252,7 +253,6 @@ def lambda_handler(event, context):
                 "message": "Submission not found.",
                 "submission_id": submission_id
             })
-
 
         # -------------------------------------------------
         # 8. Only process PENDING submissions
@@ -278,7 +278,6 @@ def lambda_handler(event, context):
                 "submission_id": submission_id,
                 "status": current_status
             })
-
 
         # -------------------------------------------------
         # 9. Save actual uploaded file locally
@@ -308,7 +307,6 @@ def lambda_handler(event, context):
                 file_bytes
             )
 
-
         logger.info(
             json.dumps({
                 "event": "actual_file_stored",
@@ -321,12 +319,12 @@ def lambda_handler(event, context):
             })
         )
 
-
         # -------------------------------------------------
         # 10. Read originally declared metadata
         # -------------------------------------------------
 
         try:
+
             declared_size = int(
                 submission.get(
                     "file_size_bytes",
@@ -344,7 +342,6 @@ def lambda_handler(event, context):
         declared_file_name = submission.get(
             "file_name"
         )
-
 
         # -------------------------------------------------
         # 11. Compare actual file with declaration
@@ -364,7 +361,6 @@ def lambda_handler(event, context):
             file_name
             == declared_file_name
         )
-
 
         # -------------------------------------------------
         # 12. Decide ACCEPTED or REJECTED
@@ -391,7 +387,6 @@ def lambda_handler(event, context):
                 "Uploaded file does not match the "
                 "original submission metadata."
             )
-
 
         # -------------------------------------------------
         # 13. Log validation result
@@ -434,7 +429,6 @@ def lambda_handler(event, context):
                     new_status,
             })
         )
-
 
         # -------------------------------------------------
         # 14. Update DynamoDB status
@@ -489,7 +483,6 @@ def lambda_handler(event, context):
                     submission_id
             })
 
-
         # -------------------------------------------------
         # 15. Final trace log
         # -------------------------------------------------
@@ -512,7 +505,6 @@ def lambda_handler(event, context):
                     new_status,
             })
         )
-
 
         # -------------------------------------------------
         # 16. Return result to frontend
@@ -541,7 +533,6 @@ def lambda_handler(event, context):
             "status":
                 new_status
         })
-
 
     except Exception as error:
 

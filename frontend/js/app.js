@@ -9,16 +9,41 @@ const statusResult = document.getElementById("statusResult");
 
 
 // ==========================================================
+// ALLOWED FILE TYPES
+// ==========================================================
+
+const ALLOWED_FILE_TYPES = {
+    pdf: "application/pdf",
+    doc: "application/msword",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+};
+
+const MAX_FILE_SIZE = 2 * 1024 * 1024;
+
+
+// ==========================================================
+// GET FILE EXTENSION
+// ==========================================================
+
+function getFileExtension(fileName) {
+
+    const parts = fileName.toLowerCase().split(".");
+
+    if (parts.length < 2) {
+        return "";
+    }
+
+    return parts.pop();
+}
+
+
+// ==========================================================
 // SUBMIT FILE
 // ==========================================================
 
 submissionForm.addEventListener("submit", async function (event) {
 
     event.preventDefault();
-
-    // ------------------------------------------------------
-    // Get values from the form
-    // ------------------------------------------------------
 
     const studentRef =
         document.getElementById("studentRef").value.trim();
@@ -50,7 +75,53 @@ submissionForm.addEventListener("submit", async function (event) {
 
 
     // ------------------------------------------------------
-    // Metadata that will first be sent to RequestUpload
+    // Validate file extension
+    // ------------------------------------------------------
+
+    const extension = getFileExtension(file.name);
+
+    const expectedContentType =
+        ALLOWED_FILE_TYPES[extension];
+
+    if (!expectedContentType) {
+
+        submissionResult.innerHTML = `
+            <p>
+                <strong>Submission failed.</strong>
+            </p>
+
+            <p>
+                Unsupported file type.
+                Only PDF, DOC and DOCX files are allowed.
+            </p>
+        `;
+
+        return;
+    }
+
+
+    // ------------------------------------------------------
+    // Validate file size
+    // ------------------------------------------------------
+
+    if (file.size > MAX_FILE_SIZE) {
+
+        submissionResult.innerHTML = `
+            <p>
+                <strong>Submission failed.</strong>
+            </p>
+
+            <p>
+                File exceeds the maximum size of 2 MB.
+            </p>
+        `;
+
+        return;
+    }
+
+
+    // ------------------------------------------------------
+    // Metadata sent to RequestUpload
     // ------------------------------------------------------
 
     const requestData = {
@@ -63,7 +134,7 @@ submissionForm.addEventListener("submit", async function (event) {
 
         file_name: file.name,
 
-        content_type: file.type,
+        content_type: expectedContentType,
 
         file_size_bytes: file.size
     };
@@ -175,7 +246,7 @@ submissionForm.addEventListener("submit", async function (event) {
                 method: "POST",
 
                 headers: {
-                    "Content-Type": "application/octet-stream",
+                    "Content-Type": expectedContentType,
                     "X-File-Name": file.name
                 },
 
@@ -233,10 +304,6 @@ submissionForm.addEventListener("submit", async function (event) {
         const finalStatus =
             uploadData.status || "PENDING";
 
-
-        // --------------------------------------------------
-        // Choose correct CSS class for final status
-        // --------------------------------------------------
 
         const finalStatusClass =
             finalStatus === "ACCEPTED"
@@ -345,13 +412,6 @@ function fileToBase64(file) {
                 const result =
                     reader.result;
 
-                // Remove the data URL prefix.
-                //
-                // Example:
-                // data:application/pdf;base64,
-                //
-                // Only the Base64 file data is sent.
-
                 const base64Data =
                     result.split(",")[1];
 
@@ -387,10 +447,6 @@ checkStatusButton.addEventListener(
             submissionIdInput.value.trim();
 
 
-        // --------------------------------------------------
-        // Check that submission ID exists
-        // --------------------------------------------------
-
         if (!submissionId) {
 
             statusResult.innerHTML = `
@@ -410,10 +466,6 @@ checkStatusButton.addEventListener(
 
         try {
 
-            // ==================================================
-            // Retrieve submission from backend
-            // ==================================================
-
             const response = await fetch(
                 `${API_URL}/submissions/${submissionId}`
             );
@@ -422,10 +474,6 @@ checkStatusButton.addEventListener(
             const data =
                 await response.json();
 
-
-            // --------------------------------------------------
-            // Handle retrieval error
-            // --------------------------------------------------
 
             if (!response.ok) {
 
@@ -453,10 +501,6 @@ checkStatusButton.addEventListener(
                 data.submission;
 
 
-            // --------------------------------------------------
-            // Determine status colour
-            // --------------------------------------------------
-
             const statusClass =
                 submission.status === "ACCEPTED"
                     ? "status-accepted"
@@ -469,10 +513,6 @@ checkStatusButton.addEventListener(
 
                     : "status-pending";
 
-
-            // ==================================================
-            // Display submission
-            // ==================================================
 
             statusResult.innerHTML = `
                 <p>
