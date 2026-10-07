@@ -12,7 +12,7 @@ import boto3
 # Configuration
 # ---------------------------------------------------------
 
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+MAX_FILE_SIZE = 2 * 1024 * 1024  # 2 MB
 
 ALLOWED_EXTENSIONS = {
     ".pdf",
@@ -163,7 +163,7 @@ def lambda_handler(event, context):
         if actual_file_size > MAX_FILE_SIZE:
 
             return response(400, {
-                "message": "File exceeds the maximum size of 10 MB.",
+                "message": "File exceeds the maximum size of 2 MB.",
                 "submission_id": submission_id
             })
 
