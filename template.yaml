@@ -15,10 +15,11 @@ Globals:
         SUBMISSIONS_TABLE: StudentSubmissions
         UPLOAD_BUCKET: student-submission-uploads
         DYNAMODB_ENDPOINT: http://host.docker.internal:8000
+
   Api:
     Cors:
       AllowMethods: "'GET,POST,OPTIONS'"
-      AllowHeaders: "'Content-Type'"
+      AllowHeaders: "'Content-Type,X-File-Name'"
       AllowOrigin: "'http://127.0.0.1:5500'"
 
 Resources:
@@ -26,6 +27,7 @@ Resources:
   # ---------------------------------------------------------
   # RequestUpload Lambda
   # POST /submissions
+  # Creates a new submission record in DynamoDB
   # ---------------------------------------------------------
   RequestUploadFunction:
     Type: AWS::Serverless::Function
@@ -42,6 +44,7 @@ Resources:
   # ---------------------------------------------------------
   # GetSubmission Lambda
   # GET /submissions/{submission_id}
+  # Retrieves submission information and status
   # ---------------------------------------------------------
   GetSubmissionFunction:
     Type: AWS::Serverless::Function
@@ -54,6 +57,28 @@ Resources:
           Properties:
             Path: /submissions/{submission_id}
             Method: get
+
+  # ---------------------------------------------------------
+  # UploadFile Lambda
+  # POST /submissions/{submission_id}/upload
+  #
+  # Receives the actual student file during local development.
+  # Amazon S3 remains the target cloud storage service.
+  # ---------------------------------------------------------
+  UploadFileFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/upload_file/
+      Handler: app.lambda_handler
+      Environment:
+        Variables:
+          LOCAL_STORAGE_PATH: /tmp/local-storage
+      Events:
+        UploadFileApi:
+          Type: Api
+          Properties:
+            Path: /submissions/{submission_id}/upload
+            Method: post
 
   # ---------------------------------------------------------
   # ProcessUpload Lambda
@@ -89,7 +114,7 @@ Resources:
 
   # ---------------------------------------------------------
   # S3 Bucket
-  # Stores uploaded student files
+  # Target cloud storage for uploaded student files
   # ---------------------------------------------------------
   UploadBucket:
     Type: AWS::S3::Bucket
@@ -119,3 +144,7 @@ Outputs:
   GetSubmissionApi:
     Description: API endpoint for retrieving submission status
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/submissions/{submission_id}"
+
+  UploadFileApi:
+    Description: Local development API endpoint for uploading the actual file
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/submissions/{submission_id}/upload"

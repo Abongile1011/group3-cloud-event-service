@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+MAX_FILE_SIZE = 2 * 1024 * 1024  # 2 MB
 
 ALLOWED_CONTENT_TYPES = {
     "application/pdf": ".pdf",
@@ -138,7 +138,7 @@ def lambda_handler(event, context):
         return response(
             400,
             {
-                "error": "File exceeds the 10 MB maximum size.",
+                "error": "File exceeds the 2 MB maximum size.",
                 "request_id": request_id,
             },
         )

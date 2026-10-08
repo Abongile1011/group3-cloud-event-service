@@ -129,6 +129,7 @@ def lambda_handler(event, context):
     )
 
         # Only PENDING submissions should be processed
+    # Only PENDING submissions should be processed
     if submission.get("status") != "PENDING":
         logger.warning(
             json.dumps({
