@@ -19,7 +19,17 @@ const ALLOWED_FILE_TYPES = {
 };
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
+// ==========================================================
+// VALIDATE STUDENT NUMBER
+// ==========================================================
 
+function validateStudentNumber(studentNumber) {
+
+    // Student number must contain exactly 9 digits.
+    const studentNumberPattern = /^[0-9]{9}$/;
+
+    return studentNumberPattern.test(studentNumber);
+}
 
 // ==========================================================
 // GET FILE EXTENSION
@@ -45,12 +55,32 @@ submissionForm.addEventListener("submit", async function (event) {
 
     event.preventDefault();
 
-    const studentRef =
-        document.getElementById("studentRef").value.trim();
+   const studentRef =
+    document.getElementById("studentRef").value.trim();
 
-    const courseCode =
-        document.getElementById("courseCode").value.trim();
+// ------------------------------------------------------
+// Validate student number before submitting
+// ------------------------------------------------------
 
+if (!validateStudentNumber(studentRef)) {
+
+    submissionResult.innerHTML = `
+        <p>
+            <strong>Submission failed.</strong>
+        </p>
+
+        <p>
+            Student number must contain exactly 9 digits.
+            Letters, symbols, and shorter or longer numbers
+            are not allowed.
+        </p>
+    `;
+
+    return;
+}
+
+const courseCode =
+    document.getElementById("courseCode").value.trim();
     const assessment =
         document.getElementById("assessment").value.trim();
 
