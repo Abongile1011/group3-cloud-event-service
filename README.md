@@ -1,4 +1,4 @@
-# Cloud-Based Student File Upload Service
+﻿# Cloud-Based Student File Upload Service
 
 **4CPS501B — Cloud Computing (Distributed Computing Part B) — Group 3 Practical**
 University of Zululand, Honours, Lecturer: Prof. Matthew O. Adigun
@@ -221,3 +221,47 @@ The reproducing member should successfully:
 5. Run the automated end-to-end test.
 
 The reproducing member should retain terminal evidence showing the successful commands and test results.
+
+
+## Milestone 4 - Final Release
+
+### Final scope
+The final system adds real file upload to the Milestone 3 slice. Allowed file types are PDF, DOC and DOCX, and the maximum file size is 2 MB.
+
+| Function | Trigger | Purpose |
+| --- | --- | --- |
+| RequestUploadFunction | POST /submissions | Validates the request and creates a PENDING record |
+| UploadFileFunction | POST /submissions/{submission_id}/upload | Checks the file against the declared metadata, stores it and sets ACCEPTED or REJECTED. Only PENDING submissions are processed. |
+| GetSubmissionFunction | GET /submissions/{submission_id} | Returns the stored status |
+| ProcessUploadFunction | S3 ObjectCreated event | Cloud-target path, simulated by a test event locally |
+| ExpirePendingFunction | Schedule | Sets old PENDING records to EXPIRED |
+
+The final architecture and event-flow diagram is in architecture/diagrams/final-architecture.png. Design decisions are in architecture/decisions/.
+
+### Configuration variables
+Copy .env.example to .env and adjust. The file contains placeholder values only.
+
+| Variable | Meaning |
+| --- | --- |
+| SUBMISSIONS_TABLE | DynamoDB table name (StudentSubmissions) |
+| UPLOAD_BUCKET | Target S3 bucket name (cloud target) |
+| DYNAMODB_ENDPOINT | DynamoDB Local address. Use http://host.docker.internal:8000 under SAM Local and http://localhost:8000 when running tests on the host |
+| LOCAL_STORAGE_PATH | Folder where files are stored in local development |
+| AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION | Dummy values for local emulation (local, local, af-south-1) |
+
+### Test
+python -m pytest tests\unit\test_request_upload.py -v
+python -m pytest tests\integration\test_submission_flow.py -v -s
+
+Final test results are in evidence/final/.
+
+### Teardown
+docker stop group3-dynamodb
+docker rm group3-dynamodb
+Remove-Item -Recurse -Force .aws-sam
+deactivate
+
+To rebuild, repeat the steps under "Start DynamoDB Local" and "Validate and Build" above. Files in local-storage are not tracked by Git.
+
+### Limitations
+The final system was validated locally and not in a live AWS environment. See "Local Emulation Limitations" above and the Limitations section of the report.
